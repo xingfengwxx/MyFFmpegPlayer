@@ -3,23 +3,42 @@ package com.wangxingxing.myffmpegplayer;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.view.SurfaceView;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
+
+    private SurfaceView surfaceView;
+    public static final String PATH = "rtmp://58.200.131.2:1935/livetv/hunantv";
+    MyPlayer myPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Example of a call to a native method
-//        TextView tv = findViewById(R.id.sample_text);
-//        tv.setText(stringFromJNI());
+        surfaceView = findViewById(R.id.surface_view);
+
+        myPlayer = new MyPlayer();
+        myPlayer.setDataSource(PATH);
+        myPlayer.setSurfaceView(surfaceView);
     }
 
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
+    @Override
+    protected void onResume() {
+        super.onResume();
+        myPlayer.prepare();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        myPlayer.prepare();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        myPlayer.release();
+    }
 }
