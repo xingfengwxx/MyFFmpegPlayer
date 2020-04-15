@@ -8,6 +8,7 @@
 #include <cstring>
 #include <pthread.h>
 #include <libavformat/avformat.h>
+#include "JNICallback.h"
 
 class MyPlayer {
 
@@ -28,7 +29,8 @@ private:
     char * data_source = 0;
     pthread_t pid_prepare = 0;
     // 媒体的总上下文
-    AVFormatContext * avFormatContext = 0;
+    AVFormatContext * formatContext = 0;
+    JNICallback *pCallback;
 };
 
 #endif //MYFFMPEGPLAYER_MYPLAYER_H

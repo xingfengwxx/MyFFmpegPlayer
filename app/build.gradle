@@ -12,8 +12,8 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                // cppFlags ""
-                abiFilters 'armeabi-v7a'
+                cppFlags ""
+                abiFilters 'armeabi-v7a' // 指定当前项目，只编译armeabi-v7a的CPU平台架构
             }
         }
     }

@@ -19,9 +19,9 @@ public class MainActivity extends AppCompatActivity {
 
         surfaceView = findViewById(R.id.surface_view);
 
-        myPlayer = new MyPlayer();
-        myPlayer.setDataSource(PATH);
-        myPlayer.setSurfaceView(surfaceView);
+//        myPlayer = new MyPlayer();
+//        myPlayer.setDataSource(PATH);
+//        myPlayer.setSurfaceView(surfaceView);
     }
 
     @Override
