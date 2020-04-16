@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <libavformat/avformat.h>
 #include "JNICallback.h"
+#include "AudioChannel.h"
 
 class MyPlayer {
 
@@ -30,6 +31,8 @@ private:
     pthread_t pid_prepare = 0;
     // 媒体的总上下文
     AVFormatContext * formatContext = 0;
+
+    AudioChannel *audioChannel = 0;
     JNICallback *pCallback;
 };
 

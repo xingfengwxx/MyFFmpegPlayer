@@ -138,7 +138,14 @@ void MyPlayer::prepare_() {
         // TODO 第十步：从编码器参数中获取流类型codec_type
         if (codecParameters->codec_type == AVMEDIA_TYPE_AUDIO) {
             // 音频流
-            // audioChannel = new AudioChannel(stream_index, codecContext, time_base);
+             audioChannel = new AudioChannel(stream_index, codecContext, time_base);
+        } else if (codecParameters->codec_type == AVMEDIA_TYPE_VIDEO) { // 视频流（目前很多字幕流，都放在视频轨道中）
+            /*
+             * 获取视频相关的 fps
+             * 平均帧率 == 时间基
+             * */
+            AVRational frame_rate = stream->avg_frame_rate;
+            int fpsValue = av_q2d(frame_rate);
         }
     }
 }
