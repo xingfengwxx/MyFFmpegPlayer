@@ -224,7 +224,7 @@ int AudioChannel::getPCM() {
 
         break;
     } // end while
-    releaseAVFrame((&frame)); // 渲染完了，frame没用了，释放掉
+    releaseAVFrame(&frame); // 渲染完了，frame没用了，释放掉
     return pcm_data_size;
 }
 

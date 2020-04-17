@@ -19,22 +19,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${RTMP}/libs/${CMAKE_ANDROID_ARCH_ABI}
 file(GLOB CPPFILS *.cpp) # 注意：这里有一个坑，不要把 *.h 加入进来了，例如：*.h
 
 add_library(
-        my-player
+        native-lib
         SHARED
         # native-lib.cpp
         ${CPPFILS}
 )
-
 
 find_library(
         log-lib
         log
 )
 
-
-
 target_link_libraries(
-        my-player
+        native-lib
         # 忽略顺序引发的问题
         -Wl,--start-group
         avcodec avfilter avformat avutil swresample swscale

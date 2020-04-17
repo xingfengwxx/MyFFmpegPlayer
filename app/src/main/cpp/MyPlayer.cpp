@@ -14,6 +14,18 @@ void * customTaskPrepareThread(void * pVoid) {
 
 MyPlayer::MyPlayer() {}
 
+MyPlayer::MyPlayer(const char *data_source, JNICallback *pCallback) {
+    // 这里有坑，这里赋值之后，不能给其他地方用，因为被释放了，变成了悬空指针
+    // this->data_source = data_source;
+
+    // 解决上面的坑，自己Copy才行
+    // [strlen(data_source)] 这段代码有坑：因为（hello  而在C++中是 hello\n），所以需要加1
+    this->data_source = new char[strlen(data_source) + 1];
+    strcpy(this->data_source, data_source);
+
+    this->pCallback = pCallback;
+}
+
 MyPlayer::~MyPlayer() {
     if (this->data_source) {
         delete this->data_source;
@@ -21,14 +33,14 @@ MyPlayer::~MyPlayer() {
     }
 }
 
-MyPlayer::MyPlayer(const char *dataSource) {
+/*MyPlayer::MyPlayer(const char *dataSource) {
     // 有坑， 会报错
     // this->data_source = data_source;
 
     // 有坑，长度不对   C:aaa     C++ aaa+\0
     this->data_source = new char[strlen(data_source) +1];
     strcpy(this->data_source, data_source);
-}
+}*/
 
 /**
  * 准备-其实就是解封装
@@ -146,6 +158,110 @@ void MyPlayer::prepare_() {
              * */
             AVRational frame_rate = stream->avg_frame_rate;
             int fpsValue = av_q2d(frame_rate);
+
+            videoChannel = new VideoChannel(stream_index, codecContext, time_base, fpsValue);
+            videoChannel->setRenderCallback(renderCallback);
+        }
+    } // end for
+
+    // TODO 第十一步：如果流中 没有音频 也 没有视频
+    if (!audioChannel && !videoChannel) {
+        // 错误信息回调给Java层
+        pCallback->onErrorAction(THREAD_CHILD, FFMPEG_NOMEDIA);
+        return;
+    }
+
+    // TODO 第十二步：要么有音频，要么有视频，要么音视频都有
+    // 准备完毕，通知Android上层开始播放
+    if (this->pCallback) {
+        pCallback->onPrepared(THREAD_CHILD); // 准备成功
+    }
+}
+
+/**
+ * 开始播放 -- 主线程
+ */
+void MyPlayer::start() {
+    isPlaying = 1;
+    if (videoChannel) {
+        videoChannel->setAudioChannel(audioChannel);
+        videoChannel->start();
+    }
+    if (audioChannel) {
+        audioChannel->start();
+    }
+    // 子线程  把压缩数据 存入到队列里面去
+    pthread_create(&pid_start, 0, customTaskPrepareThread, this);
+}
+
+/**
+ * 真正开始播放，属于子线程
+ *
+ * 此函数（读包（未解码 音频/视频 包） 放入队列）
+ *
+ * 把 音频 视频 压缩数据包 放入队列
+ */
+void MyPlayer::start_() {
+    // 循环 读视频包
+    while (isPlaying) {
+        // TODO 由于我们的操作是在异步线程，那就好办了，等待（先让消费者消费掉，然后在生产）
+        // 下面解决方案：通俗易懂 让生产慢一点，消费了，在生产
+        // 内存泄漏点1，解决方案：控制队列大小
+        if (videoChannel && videoChannel->packages.queueSize() > 100) {
+            // 休眠 等待队列中的数据被消费
+            av_usleep(10 * 1000);
+            continue;
+        }
+        // 内存泄漏点1，解决方案：控制队列大小
+        if (audioChannel && audioChannel->packages.queueSize() > 100) {
+            // 休眠 等待队列中的数据被消费
+            av_usleep(10 * 1000);
+            continue;
+        }
+
+        // AVPacket 可能是音频 可能是视频, 没有解码的（数据包） 压缩数据AVPacket
+        AVPacket * packet = av_packet_alloc();
+        int ret = av_read_frame(formatContext, packet); // 这行代码一执行完毕，packet就有（音视频数据）
+        /*if (ret != 0) {
+           // 后续处理
+           return;
+       }*/
+
+        if (!ret) { // ret == 0
+            /*
+             * 把已经得到的packet 放入队列中
+             * 先判断是视频  还是  音频， 分别对应的放入 音频队列  视频队列
+             * packet->stream_index 对应之前的prepare中循环的i
+             * */
+            if (videoChannel && videoChannel->stream_index == packet->stream_index) {
+                /*
+                 * 如果他们两 相等 说明是视频  视频包
+                 * 未解码的 视频数据包 加入到队列
+                 * */
+                videoChannel->packages.push(packet);
+            } else if (audioChannel && audioChannel->stream_index == packet->stream_index) {
+                /*
+                 * 如果他们两 相等 明是音频  音频包
+                 * 未解码的 音频数据包 加入到队列
+                 * */
+                audioChannel->packages.push(packet);
+            }
+        } else if (ret == AVERROR_EOF) { // or   end of file， 文件结尾，读完了 的意思
+            // 代表读完了
+            // TODO 一定是要 读完了 并且 也播完了，才做事情
+        } else { // ret  != 0
+            // 代表失败了，有问题
+            break;
         }
     }
+    // end while
+
+    // 最后做释放的工作
+    isPlaying = 0; // 标记清零
+    videoChannel->stop();
+    audioChannel->stop();
+}
+
+void MyPlayer::setRenderCallback(RenderCallback renderCallback) {
+    this->renderCallback = renderCallback;
 }
