@@ -2,14 +2,21 @@
 // Created by WangXingxing on 2020/1/17.
 //
 
+#include <pthread.h>
 #include "MyPlayer.h"
 
-// 函数指针
-// void* (*__start_routine)(void*)
+// TODO 异步 函数指针 - 准备工作prepare
 void * customTaskPrepareThread(void * pVoid) {
     MyPlayer * myPlayer = static_cast<MyPlayer *>(pVoid);
     myPlayer->prepare_();
     return 0; // 必须返回，有坑
+}
+
+// TODO 异步 函数指针 - 开始播放工作start
+void * customTaskStartThread(void * pVoid) {
+    MyPlayer * myPlayer = static_cast<MyPlayer *>(pVoid);
+    myPlayer->start_();
+    return 0; // 坑：一定要记得return
 }
 
 MyPlayer::MyPlayer() {}
@@ -191,7 +198,7 @@ void MyPlayer::start() {
         audioChannel->start();
     }
     // 子线程  把压缩数据 存入到队列里面去
-    pthread_create(&pid_start, 0, customTaskPrepareThread, this);
+    pthread_create(&pid_start, 0, customTaskStartThread, this);
 }
 
 /**

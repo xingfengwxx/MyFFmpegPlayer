@@ -12,9 +12,9 @@
 #include <SLES/OpenSLES_Android.h>
 
 extern "C" {
-#include <libswscale/swscale.h>
-#include <libavutil/channel_layout.h>
-#include <libswresample/swresample.h> // 重采样支持
+    #include <libswscale/swscale.h>
+    #include <libavutil/channel_layout.h>
+    #include <libswresample/swresample.h> // 重采样支持
 };
 
 

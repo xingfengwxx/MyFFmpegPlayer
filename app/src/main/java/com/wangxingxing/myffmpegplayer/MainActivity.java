@@ -8,6 +8,7 @@ import android.os.Environment;
 import android.view.SurfaceView;
 import android.widget.TextView;
 
+import com.blankj.utilcode.util.LogUtils;
 import com.blankj.utilcode.util.PermissionUtils;
 import com.blankj.utilcode.util.ToastUtils;
 
@@ -51,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
                         ToastUtils.showShort("准备好了，开始播放...");
                     }
                 });
+                LogUtils.i("准备好了，开始播放...");
 
                 // 准备成功之后，开始播放 视频 音频
                 myPlayer.start();

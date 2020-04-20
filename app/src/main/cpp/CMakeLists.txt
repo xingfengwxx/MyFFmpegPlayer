@@ -39,6 +39,7 @@ target_link_libraries(
 
         ${log-lib}
         z # 存放在NDK目录的，可以去支持FFmpeg，FFmpeg必须要依赖z
+        rtmp
 
         android # NDK中的支持，能够去渲染屏幕
         OpenSLES # NDK的支持，能够去支持声卡
