@@ -26,10 +26,11 @@ void dropAVPacket(queue<AVPacket *> &qq) {
 }
 
 VideoChannel::VideoChannel(int stream_index, AVCodecContext *pContext, AVRational rational,
-                           int fpsValue) : BaseChannel(stream_index, pContext, rational) {
+                           int fpsValue, JNICallback * jniCallback) : BaseChannel(stream_index, pContext, rational, jniCallback) {
     this->fpsValue = fpsValue;
     this->frames.setSyncCallback(dropAVFrame);
     this->packages.setSyncCallback(dropAVPacket);
+    this->jniCallback = jniCallback;
 }
 
 VideoChannel::~VideoChannel() {}
@@ -71,7 +72,12 @@ void VideoChannel::start() {
 }
 
 void VideoChannel::stop() {
-
+    isPlaying = 0;
+    jniCallback = 0;
+    packages.setFlag(0);
+    frames.setFlag(0);
+    pthread_join(pid_video_player, 0);
+    pthread_join(pid_video_decode, 0);
 }
 
 /**
@@ -204,6 +210,14 @@ void VideoChannel::video_player() {
 
         // 拿到视频
         this->videoTime = frame->best_effort_timestamp * av_q2d(this->time_base);
+
+        if (!audioChannel) {
+            //没有音频（类似GIF） 默剧
+            av_usleep(result_delay * 1000000);
+            if (jniCallback) {
+                jniCallback->onProgress(THREAD_CHILD, videoTime);
+            }
+        }
 
         // 拿到音频 播放时间基 audioChannel.audioTime
         double_t audioTime = this->audioChannel->audioTime; // 音频那边的值，是根据它来计算的

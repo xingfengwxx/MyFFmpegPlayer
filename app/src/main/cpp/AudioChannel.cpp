@@ -1,7 +1,8 @@
 #include "AudioChannel.h"
+#include "macro.h"
 
-AudioChannel::AudioChannel(int stream_index, AVCodecContext *pContext, AVRational time_base)
-        : BaseChannel(stream_index, pContext, time_base)
+AudioChannel::AudioChannel(int stream_index, AVCodecContext *pContext, AVRational time_base, JNICallback * jniCallback)
+        : BaseChannel(stream_index, pContext, time_base, jniCallback)
 {
     // 播放的参数 必须固定，声卡要求（输出 音频重要参数，必须固定）
     // 40000 输入   3000输入
@@ -35,7 +36,11 @@ AudioChannel::AudioChannel(int stream_index, AVCodecContext *pContext, AVRationa
 }
 
 AudioChannel::~AudioChannel() {
-    // TODO swr_ctx 要释放
+    if (swr_ctx) {
+        swr_free(&swr_ctx);
+        swr_ctx = 0;
+        DELETE(out_buffers);
+    }
 }
 
 // 函数指针 相当于java的run函数
@@ -72,10 +77,25 @@ void AudioChannel::start() {
     pthread_create(&pid_audio_player, 0, task_audio_player, this);
 }
 
+/**
+ * 停止音频释放
+ */
 void AudioChannel::stop() {
     // TODO 第七大步：释放操作
+    isPlaying = 0;
+    jniCallback = 0;
+    packages.setFlag(0);
+    frames.setFlag(0);
+    pthread_join(pid_audio_player, 0);
+    pthread_join(pid_audio_decode, 0);
+    if (swr_ctx) {
+        swr_free(&swr_ctx);
+        swr_ctx = 0;
+    }
+
+
     // 7.1 设置停止状态
-    /*if (bqPlayerPlay) {
+    if (bqPlayerPlay) {
         (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_STOPPED);
         bqPlayerPlay = 0;
     }
@@ -95,7 +115,7 @@ void AudioChannel::stop() {
         (*engineObject)->Destroy(engineObject);
         engineObject = 0;
         engineInterface = 0;
-    }*/
+    }
 }
 
 /**
@@ -206,6 +226,9 @@ int AudioChannel::getPCM() {
 
         // 拿到音频 包 帧 时间戳 (时间都是有单位的，而在FFmpeg是成为时间基 TimeBase)
         audioTime = frame->best_effort_timestamp * av_q2d(this->time_base);
+        if (jniCallback) {
+            jniCallback->onProgress(THREAD_CHILD, audioTime);
+        }
 
         break;
     } // end while

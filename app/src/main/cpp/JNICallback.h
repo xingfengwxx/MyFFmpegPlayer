@@ -16,6 +16,7 @@ public:
 
     void onPrepared(int thread_mode);
     void onErrorAction(int thread_mode, int error_code);
+    void onProgress(int thread_mode, int progress);
 
 private:
     // 成员变量，规范写法，如果是指针 就初始化 = 0
@@ -27,6 +28,8 @@ private:
     jmethodID jmd_prepared;
     // 上层 失败函数标记
     jmethodID jmd_error;
+    // 上层 播放进度回调
+    jmethodID jmd_progress;
 };
 
 

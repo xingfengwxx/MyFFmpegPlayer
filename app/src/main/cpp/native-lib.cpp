@@ -105,7 +105,9 @@ Java_com_wangxingxing_myffmpegplayer_MyPlayer_startNative(JNIEnv *env, jobject t
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_wangxingxing_myffmpegplayer_MyPlayer_stopNative(JNIEnv *env, jobject thiz) {
-
+    if (player) {
+        player->stop();
+    }
 }
 
 /**
@@ -114,7 +116,14 @@ Java_com_wangxingxing_myffmpegplayer_MyPlayer_stopNative(JNIEnv *env, jobject th
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_wangxingxing_myffmpegplayer_MyPlayer_releaseNative(JNIEnv *env, jobject thiz) {
-    // TODO: implement releaseNative()
+    pthread_mutex_lock(&mutex);
+    if (nativeWindow) {
+        //把老的释放
+        ANativeWindow_release(nativeWindow);
+        nativeWindow = 0;
+    }
+    pthread_mutex_unlock(&mutex);
+    DELETE(player); // 移除中转站
 }
 
 extern "C"
@@ -138,4 +147,22 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_wangxingxing_myffmpegplayer_MyPlayer_getFFmpegVersion(JNIEnv *env, jobject thiz) {
     return env->NewStringUTF(av_version_info());
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_wangxingxing_myffmpegplayer_MyPlayer_getDurationNative(JNIEnv *env, jobject thiz) {
+    if (player) {
+        return player->getDuration();
+    }
+    return 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_wangxingxing_myffmpegplayer_MyPlayer_seekToNative(JNIEnv *env, jobject thiz,
+                                                           jint progress) {
+    if (player) {
+        player->seekTo(progress);
+    }
 }

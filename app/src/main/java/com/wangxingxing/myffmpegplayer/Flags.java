@@ -35,4 +35,7 @@ public interface Flags {
     // #define FFMPEG_READ_PACKETS_FAIL (ERROR_CODE_FFMPEG_PLAY - 8)
     int FFMPEG_READ_PACKETS_FAIL = -8;
 
+    //拖动进度条设置进度异常
+    int FFMPEG_SET_PROGRESS_FAIL = -9;
+
 }

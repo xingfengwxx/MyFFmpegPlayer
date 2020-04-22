@@ -5,6 +5,16 @@
 #ifndef MYFFMPEGPLAYER_MACRO_H
 #define MYFFMPEGPLAYER_MACRO_H
 
+#include <android/log.h>
+
+//定义释放的宏函数
+#define DELETE(object) if (object) { delete object; object = 0;}
+
+//定义日志打印宏函数
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "MYFFMPEG",__VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "MYFFMPEG",__VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "MYFFMPEG",__VA_ARGS__)
+
 #define THREAD_MAIN 1   // 此宏代表 主线程的意思
 #define THREAD_CHILD 2  // 此宏代表 子线程的意思
 
@@ -31,5 +41,8 @@
 
 //读取媒体数据包失败
 #define FFMPEG_READ_PACKETS_FAIL (ERROR_CODE_FFMPEG_PLAY - 8)
+
+//拖动进度条设置进度异常
+#define FFMPEG_SET_PROGRESS_FAIL -9
 
 #endif //MYFFMPEGPLAYER_MACRO_H

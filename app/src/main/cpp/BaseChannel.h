@@ -11,15 +11,17 @@ extern "C" {
 };
 
 #include "safe_queue.h"
+#include "JNICallback.h"
 
 class BaseChannel {
 public:
     int stream_index;
 
-    BaseChannel(int stream_index, AVCodecContext *pContext, AVRational time_base) {
+    BaseChannel(int stream_index, AVCodecContext *pContext, AVRational time_base, JNICallback * jniCallback) {
         this->stream_index = stream_index;
         this->pContext = pContext;
         this->time_base = time_base;
+        this->jniCallback = jniCallback;
         packages.setReleaseCallback(releaseAVPacket);
         frames.setReleaseCallback(releaseAVFrame);
     }
@@ -69,6 +71,7 @@ public:
     AVRational time_base;
     double audioTime; // 每一帧，音频计算后的时间值
     double videoTime; // 每一帧，视频计算后的时间值
+    JNICallback * jniCallback = 0;
 };
 
 #endif //MYFFMPEGPLAYER_BASECHANNEL_H

@@ -2,7 +2,6 @@
 // Created by WangXingxing on 2020/1/17.
 //
 
-#include <pthread.h>
 #include "MyPlayer.h"
 
 // TODO 异步 函数指针 - 准备工作prepare
@@ -19,6 +18,14 @@ void * customTaskStartThread(void * pVoid) {
     return 0; // 坑：一定要记得return
 }
 
+//设置为友元函数
+void * task_stop(void * args) {
+    MyPlayer *myPlayer = static_cast<MyPlayer *>(args);
+    myPlayer->stop_();
+
+    return 0; //一定一定一定要返回0！！！
+}
+
 MyPlayer::MyPlayer() {}
 
 MyPlayer::MyPlayer(const char *data_source, JNICallback *pCallback) {
@@ -31,12 +38,14 @@ MyPlayer::MyPlayer(const char *data_source, JNICallback *pCallback) {
     strcpy(this->data_source, data_source);
 
     this->pCallback = pCallback;
+    pthread_mutex_init(&seekMutex, 0);
 }
 
 MyPlayer::~MyPlayer() {
     if (this->data_source) {
         delete this->data_source;
         this->data_source = 0;
+        pthread_mutex_destroy(&seekMutex);
     }
 }
 
@@ -76,8 +85,8 @@ void MyPlayer::prepare_() {
 
     // 此字典 能够决定我们打开的需求
     AVDictionary * dictionary = 0;
-    // 注意：单位是微妙，如果：你的模拟器很卡，尽量设置大一点
-    av_dict_set(&dictionary, "timeout", "5000000", 0);
+    // 注意：单位是微妙，如果：你的模拟器很卡，尽量设置大一点,这里是10秒
+    av_dict_set(&dictionary, "timeout", "10000000", 0);
 
     int ret = avformat_open_input(&formatContext, data_source, 0, &dictionary); // 打开文件需要字典
 
@@ -105,6 +114,8 @@ void MyPlayer::prepare_() {
         }
         return;
     }
+
+    duration = formatContext->duration / AV_TIME_BASE; // 最终是要拿到秒
 
     // TODO 第三步：根据流信息，流的个数，循环查找， 音频流 视频流
     // nb_streams == 流的个数
@@ -157,7 +168,7 @@ void MyPlayer::prepare_() {
         // TODO 第十步：从编码器参数中获取流类型codec_type
         if (codecParameters->codec_type == AVMEDIA_TYPE_AUDIO) {
             // 音频流
-             audioChannel = new AudioChannel(stream_index, codecContext, time_base);
+             audioChannel = new AudioChannel(stream_index, codecContext, time_base, pCallback);
         } else if (codecParameters->codec_type == AVMEDIA_TYPE_VIDEO) { // 视频流（目前很多字幕流，都放在视频轨道中）
             /*
              * 获取视频相关的 fps
@@ -166,7 +177,7 @@ void MyPlayer::prepare_() {
             AVRational frame_rate = stream->avg_frame_rate;
             int fpsValue = av_q2d(frame_rate);
 
-            videoChannel = new VideoChannel(stream_index, codecContext, time_base, fpsValue);
+            videoChannel = new VideoChannel(stream_index, codecContext, time_base, fpsValue, pCallback);
             videoChannel->setRenderCallback(renderCallback);
         }
     } // end for
@@ -228,7 +239,9 @@ void MyPlayer::start_() {
 
         // AVPacket 可能是音频 可能是视频, 没有解码的（数据包） 压缩数据AVPacket
         AVPacket * packet = av_packet_alloc();
+        pthread_mutex_lock(&seekMutex);
         int ret = av_read_frame(formatContext, packet); // 这行代码一执行完毕，packet就有（音视频数据）
+        pthread_mutex_unlock(&seekMutex);
         /*if (ret != 0) {
            // 后续处理
            return;
@@ -269,6 +282,115 @@ void MyPlayer::start_() {
     audioChannel->stop();
 }
 
+void MyPlayer::stop_() {
+    /*
+ * 要保证_prepare方法（子线程中）执行完再释放（在主线程）
+ * pthread_join ：这里调用了后会阻塞主，可能引发ANR
+ * */
+    isPlaying = 0; // 修改成false，音频和视频，的所有解码 和 播放 等等，全部停止了
+    pthread_join(pid_prepare, 0); //解决了：要保证_prepare方法（子线程中）执行完再释放（在主线程）的问题
+
+    if (formatContext) {
+        avformat_close_input(&formatContext); // 关闭媒体格式上下文
+        avformat_free_context(formatContext); // 回收媒体格式上下文
+        formatContext = 0;
+    }
+
+    DELETE(videoChannel);
+    DELETE(audioChannel);
+}
+
 void MyPlayer::setRenderCallback(RenderCallback renderCallback) {
     this->renderCallback = renderCallback;
+}
+
+void MyPlayer::stop() {
+    //    isPlaying = 0;
+    pCallback = 0; //prepare阻塞中停止了，还是会回调给java "准备好了"
+
+    //既然在主线程会引发ANR，那么我们到子线程中去释放
+    //创建stop子线程
+    pthread_create(&this->pid_stop, 0, task_stop, this);
+}
+
+
+
+int MyPlayer::getDuration() const {
+    return duration;
+}
+
+/**
+ * 异步线程
+ * 控制 播放时长的，音频 和 视频 的 快进快退
+ * @param progress 进度值
+ */
+void MyPlayer::seekTo(int progress) {
+    LOGD("seekTo progress: %d", progress);
+    if (progress < 0 || progress > duration) {
+        // 错误信息回调给Java层
+        pCallback->onErrorAction(THREAD_CHILD, FFMPEG_SET_PROGRESS_FAIL);
+        LOGE("error: %s", FFMPEG_SET_PROGRESS_FAIL);
+        return;
+    }
+
+    if (!audioChannel && !videoChannel) {
+        pCallback->onErrorAction(THREAD_CHILD, FFMPEG_NOMEDIA);
+        LOGE("error: %s", FFMPEG_NOMEDIA);
+        return;
+    }
+
+    if (!formatContext) {
+        pCallback->onErrorAction(THREAD_CHILD, FFMPEG_ALLOC_CODEC_CONTEXT_FAIL);
+        LOGE("error: %s", FFMPEG_ALLOC_CODEC_CONTEXT_FAIL);
+        return;
+    }
+
+    /*
+     * 1,上下文
+     * 2，流索引，-1：表示选择的是默认流
+     * 3，要seek到的时间戳
+     * 4，seek的方式
+     *
+     * AVSEEK_FLAG_BACKWARD： 表示seek到请求的时间戳之前的最靠近的一个关键帧
+     * AVSEEK_FLAG_BYTE：基于字节位置seek
+     * AVSEEK_FLAG_ANY：任意帧（可能不是关键帧，会花屏）
+     * AVSEEK_FLAG_FRAME：基于帧数seek
+     * */
+
+    // 为什么要加互斥锁？ 我们用到了 媒体格式上下文formatContext，（音频通道，视频通道 都用到了formatContext）为了安全，所以加锁
+    pthread_mutex_lock(&seekMutex);
+
+    int ret = av_seek_frame(formatContext, -1, progress * AV_TIME_BASE, AVSEEK_FLAG_BACKWARD);
+    LOGD("seekTo ret=%d", ret);
+
+    if (ret < 0) {
+        pCallback->onErrorAction(THREAD_CHILD, ret);
+        return;
+    }
+
+    /**
+     * 用户在拖动的过程中，还没有松手的过程中，（正在解码，正在播放.....）
+     * 上层手放开了，拖动值---》时长值 ---> native（重新播放：跳转到用户指定的位置播放）
+     */
+    if (audioChannel) {
+        audioChannel->packages.setFlag(0); // 全部停止 -- 不要在解码了，不要在播放了
+        audioChannel->frames.setFlag(0); // 全部停止 -- 不要在解码了，不要在播放了
+        audioChannel->packages.clearQueue(); // 停止后 收尾动作
+        audioChannel->frames.clearQueue(); // 停止后 收尾动作
+        //清除数据后，让队列重新工作
+        audioChannel->packages.setFlag(1); // 让队列里面的一切，开始工作....
+        audioChannel->frames.setFlag(1); // 让队列里面的一切，开始工作....
+    }
+
+    if (videoChannel) {
+        videoChannel->packages.setFlag(0); // 让队列里面的一切，开始工作....
+        videoChannel->frames.setFlag(0); // 让队列里面的一切，开始工作....
+        videoChannel->packages.clearQueue(); // 停止后 收尾动作
+        videoChannel->packages.clearQueue(); // 停止后 收尾动作
+        //清除数据后，让队列重新工作
+        videoChannel->packages.setFlag(1); // 让队列里面的一切，开始工作....
+        videoChannel->frames.setFlag(1); // 让队列里面的一切，开始工作....
+    }
+
+    pthread_mutex_unlock(&seekMutex);
 }

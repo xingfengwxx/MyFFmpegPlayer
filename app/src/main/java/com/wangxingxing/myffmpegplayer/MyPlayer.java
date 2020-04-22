@@ -20,6 +20,7 @@ public class MyPlayer implements SurfaceHolder.Callback {
     private SurfaceHolder surfaceHolder;
     // 消息告诉MainActivity
     private OnPreparedListener onPreparedListener;
+    private OnProgressListener onProgressListener;
 
     public MyPlayer() {
 
@@ -55,14 +56,17 @@ public class MyPlayer implements SurfaceHolder.Callback {
 
     }
 
+
+    /** java层 start ===========================================================================*/
+
     /**
-     * 上层区域
+     * 准备工作
      */
     public void prepare() {
         /*
-        * 准备工作（解封装-其实就是把.mp4给解出来）
-        * MainActivity打开后，最先调用的 函数
-        * */
+         * 准备工作（解封装-其实就是把.mp4给解出来）
+         * MainActivity打开后，最先调用的 函数
+         * */
         prepareNative(this.dataSource);
     }
 
@@ -84,8 +88,32 @@ public class MyPlayer implements SurfaceHolder.Callback {
      * 资源释放
      */
     public void release() {
+        surfaceHolder.removeCallback(this);
         releaseNative();
     }
+
+    /**
+     * 获取总的播放时长
+     *
+     * @return
+     */
+    public int getDuration() {
+        return getDurationNative();
+    }
+
+    public void seekTo(final int playProgress) {
+        new Thread() {
+            @Override
+            public void run() {
+                seekToNative(playProgress);
+            }
+        }.start();
+    }
+
+    /** java层 end ===========================================================================*/
+
+
+    /** JNI层 start ==========================================================================*/
 
     /**
      * 给JNI 方式调用的方法，准备成功
@@ -125,6 +153,9 @@ public class MyPlayer implements SurfaceHolder.Callback {
                 case Flags.FFMPEG_READ_PACKETS_FAIL:
                     errorText = "读取媒体数据包失败";
                     break;
+                case Flags.FFMPEG_SET_PROGRESS_FAIL:
+                    errorText = "设置进度异常";
+                    break;
                 default:
                     errorText = "未知错误，自己去检测你的垃圾代码...";
                     break;
@@ -133,20 +164,47 @@ public class MyPlayer implements SurfaceHolder.Callback {
         }
     }
 
+    /**
+     * 给JNI 方式回调的方法（播放进度的回调）
+     */
+    public void onProgress(int progress) {
+        if (onProgressListener != null) {
+            onProgressListener.onProgress(progress);
+        }
+    }
+
+    /** JNI层 end ==========================================================================*/
+
 
     /**
-     * native区域
+     * native层 start =======================================================================
      */
+
     public native void prepareNative(String dataSource);
+
     public native void startNative();
+
     public native void stopNative();
+
     public native void releaseNative();
+
     // 告诉底层，上层可以怎么去渲染，其实底层是操控 Surface对象
     public native void setSurfaceNative(Surface surface);
+
     public native String getFFmpegVersion();
+
+    public native int getDurationNative();
+
+    public native void seekToNative(int progress);
+
+    /** native层 end =======================================================================*/
+
+
+    /** java 接口 start ====================================================================*/
 
     /**
      * MainActivity设置监听，就可以回调到MainActivity的方法，进行UI的操作了
+     *
      * @param onPreparedListener
      */
     public void setOnPreparedListener(OnPreparedListener onPreparedListener) {
@@ -158,6 +216,20 @@ public class MyPlayer implements SurfaceHolder.Callback {
      */
     interface OnPreparedListener {
         void onPrepared();
+
         void onError(String errorText);
     }
+
+    /**
+     * 进度回调接口
+     */
+    interface OnProgressListener {
+        void onProgress(int progress);
+    }
+
+    public void setOnProgressListener(OnProgressListener onProgressListener) {
+        this.onProgressListener = onProgressListener;
+    }
+
+    /** java 接口 end ====================================================================*/
 }

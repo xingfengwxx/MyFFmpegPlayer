@@ -24,6 +24,10 @@ JNICallback::JNICallback(JavaVM *javaVm, JNIEnv *env, jobject instance) {
     // 调用 上层 失败的函数 2
     sig = "(I)V";
     jmd_error = env->GetMethodID(mMyPlayerClass, "onError", sig);
+
+    // 调用 上层 播放进度回调的函数 3
+    sig = "(I)V";
+    jmd_progress = env->GetMethodID(mMyPlayerClass, "onProgress", sig);
 }
 
 /**
@@ -77,5 +81,19 @@ void JNICallback::onErrorAction(int thread_mode, int error_code) {
         }
         jniEnv->CallVoidMethod(this->instance, jmd_error, error_code); // 调用Java层方法
         javaVm->DetachCurrentThread(); // 解除附加，必须的
+    }
+}
+
+void JNICallback::onProgress(int thread_mode, int progress) {
+    if (thread_mode == THREAD_MAIN) {
+        //主线程
+        env->CallVoidMethod(instance, jmd_progress, progress);
+    } else {
+        //子线程
+        //当前子线程的 JNIEnv
+        JNIEnv * env_child;
+        javaVm->AttachCurrentThread(&env_child, 0);
+        env_child->CallVoidMethod(instance, jmd_progress, progress);
+        javaVm->DetachCurrentThread();
     }
 }
