@@ -11,43 +11,43 @@
 
 ### 解码流程
 
-![流程图-1](res\pic_1.png)
+![pic_1.png](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2pkgu81rj31g60ljt9a.jpg)
 
-![视频原始数据](res\pic_6.png)
+![视频原始数据](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2po7c5v9j30sg0lcaav.jpg)
 
-![解码流程-2](res\pic_9.png)
+![解码流程-2](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2pok9gxuj30sg0lcq4s.jpg)
 
 ### 调用路径
 
-![调用路径](res\pic_10.png)
+![调用路径](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2pp047auj30mr1kcgpw.jpg)
 
 ### P帧、B帧、I帧
 
-![P帧、B帧、I帧](res\pic_7.png)
+![P帧、B帧、I帧](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2ppcty0aj30sg0lcjsq.jpg)
 
 ### 音频重采样
 
-![音频重采样-1](res\pic_8.png)
+![音频重采样-1](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2ppm6p8ej30sg0lcaaz.jpg)
 
-![](res\pic_12.png)
+![](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2pq3x460j30sg0lcmxu.jpg)
 
-![](res\pic_11.png)
+![pic_11.png](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2pqhbohjj30sg0lc3ze.jpg)
 
 ### 音视频流程对比
 
-![](res\pic_13.png)
+![pic_13.png](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2pqzq8p9j31cl1lragz.jpg)
 
 ### 动作图
 
-![动作图](res\pic_14.png)
+![pic_14.png](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2prc6c1sj30rs28xwlc.jpg)
 
 音视频同步
 
-![](res\pic_15.png)
+![pic_15.png](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2prkeerej30sg0lcwf3.jpg)
 
 ### 进度条
 
-![](res\pic_16.png)
+![pic_16.png](http://ww1.sinaimg.cn/large/006iQcGSgy1ge2prsqs7sj31g60lj0su.jpg)
 
 ## 笔记
 
