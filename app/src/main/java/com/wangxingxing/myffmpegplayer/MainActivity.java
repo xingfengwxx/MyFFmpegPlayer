@@ -211,6 +211,12 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
         AppUtils.relaunchApp(true);
     }
 
+    public void btnPause(View view) {
+        if (myPlayer != null) {
+            myPlayer.stop();
+        }
+    }
+
     private Handler mHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {

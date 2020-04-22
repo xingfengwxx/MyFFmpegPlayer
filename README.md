@@ -75,3 +75,8 @@
 1.释放 window 重量级的，渲染画面的
 2.释放 中转站 涉及的代码太多
 ```
+
+## 第三方库
+
+1. [性能监测工具、开发助手](https://github.com/didi/DoraemonKit)
+2. [AndroidUtilCode](https://github.com/Blankj/AndroidUtilCode)

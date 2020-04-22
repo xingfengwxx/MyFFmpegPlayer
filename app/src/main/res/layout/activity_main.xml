@@ -58,7 +58,15 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:text="切换播放类型后，重启后生效"/>
+
+        <Button
+            android:id="@+id/btn_pause"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="btnPause"
+            android:text="暂停"/>
     </LinearLayout>
+
 
 
 
