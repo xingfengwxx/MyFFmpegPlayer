@@ -25,6 +25,42 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="250dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btn_mp4"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:onClick="playMP4"
+            android:text="MP4"/>
+
+        <Button
+            android:id="@+id/btn_rtmp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:onClick="playRTMP"
+            android:text="湖南卫视（RTMP）"/>
+        </LinearLayout>
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="切换播放类型后，重启后生效"/>
+    </LinearLayout>
+
+
 
     <TextView
         android:id="@+id/tv_info"
